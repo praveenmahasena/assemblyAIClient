@@ -1,6 +1,8 @@
 package client
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,11 +21,10 @@ func GetTransScript(fb []byte, scriptCh chan<- string, errorCh chan<- error) {
 	}
 	defer con.Close()
 
-	_, err := io.MultiWriter(con).Write(fb)
-	if err != nil {
-		errorCh <- fmt.Errorf("error during sending the file %v", err)
-		return
-	}
+	binary.Write(con,binary.LittleEndian,int64(len(fb)))
+	io.CopyN(con,bytes.NewReader(fb),int64(len(fb)))
+
+
 	r := struct {
 		Status int    `json:"status"`
 		Data   string `json:"data"`
@@ -32,5 +33,6 @@ func GetTransScript(fb []byte, scriptCh chan<- string, errorCh chan<- error) {
 		errorCh <- fmt.Errorf("error during decoding data %v", err)
 		return
 	}
+
 	scriptCh <- r.Data
 }
